@@ -1,5 +1,9 @@
+import itertools
 import os
+import time
+
 import torch
+import torch.cuda
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
@@ -12,6 +16,9 @@ from model import densenet_cifar
 import argparse
 
 parser = argparse.ArgumentParser(description='cifar10 classification models')
+parser.add_argument('--benchmark', action='store_true')
+parser.add_argument('--epochs', type=int, default=10)
+parser.add_argument('--batches', type=int, default=None)
 parser.add_argument('--lr', default=0.1, help='')
 parser.add_argument('--resume', default=None, help='')
 parser.add_argument('--batch_size', default=128, help='')
@@ -43,24 +50,28 @@ test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=100,
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 
 	       'dog', 'frog', 'horse', 'ship', 'truck')
 
-print('==> Making model..')
-net = densenet_cifar()
-net = net.to(device)
-if device == 'cuda':
-	net = torch.nn.DataParallel(net)
-	cudnn.benchmark = True
 
-if args.resume is not None:
-	checkpoint = torch.load('./save_model/' + args.resume)
-	net.load_state_dict(checkpoint['net'])
+def make_model(num_gpus=1):
+	global net, criterion, optimizer, step_lr_scheduler
+	print('==> Making model..')
+	net = densenet_cifar()
+	net = net.to(device)
+	if device == 'cuda':
+		net = torch.nn.DataParallel(net, device_ids=list(range(num_gpus)))
+		cudnn.benchmark = True
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.1, 
-	                  momentum=0.9, weight_decay=1e-4)
-step_lr_scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[150, 225], gamma=0.1)
+	if args.resume is not None:
+		checkpoint = torch.load('./save_model/' + args.resume)
+		net.load_state_dict(checkpoint['net'])
+
+	criterion = nn.CrossEntropyLoss()
+	optimizer = optim.SGD(net.parameters(), lr=0.1,
+						  momentum=0.9, weight_decay=1e-4)
+	step_lr_scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[150, 225], gamma=0.1)
 
 
 def train(epoch):
+	global net, criterion, optimizer, step_lr_scheduler
 	net.train()
 
 	train_loss = 0
@@ -68,6 +79,8 @@ def train(epoch):
 	total = 0
 
 	for batch_idx, (inputs, targets) in enumerate(train_loader):
+		if args.batches is not None and batch_idx == args.batches:
+			break
 		inputs = inputs.to(device)
 		targets = targets.to(device)
 		outputs = net(inputs)
@@ -88,6 +101,7 @@ def train(epoch):
 
 
 def test(epoch, best_acc):
+	global net, criterion, optimizer, step_lr_scheduler
 	net.eval()
 
 	test_loss = 0
@@ -127,14 +141,50 @@ def test(epoch, best_acc):
 	return best_acc
 
 
-if __name__=='__main__':
+def main():
 	best_acc = 0
 	if args.resume is not None:
 		test(epoch=0, best_acc=0)
 	else:
-		for epoch in range(300):
+		for epoch in range(args.epochs):
 			step_lr_scheduler.step()
 			train(epoch)
 			best_acc = test(epoch, best_acc)
 			print('best test accuracy is ', best_acc)
-		
+		return best_acc
+
+
+def ncycles(iterable, n):
+    "Returns the sequence elements n times"
+    return itertools.chain.from_iterable(itertools.repeat(tuple(iterable), n))
+
+
+if __name__ == '__main__':
+	if args.benchmark:
+		device_count = torch.cuda.device_count()
+		print(f'Found {device_count} CUDA devices.')
+		dev_count_range = range(1, device_count+1)
+		durations = {i: [] for i in dev_count_range}
+		accuracies = {i: [] for i in dev_count_range}
+		for num_gpus in ncycles(dev_count_range, n=4):
+			t0 = time.time()
+			make_model(num_gpus=num_gpus)
+			accu = main()
+			t1 = time.time()
+
+			durations[num_gpus].append(t1 - t0)
+			accuracies[num_gpus].append(accu)
+		print('---- BENCHMARK PARAMS ----')
+		print(f'Num epochs  {args.epochs}')
+		print(f'Num batches {args.batches}')
+		print('---- BENCHMARK RESULT ----')
+		for i in dev_count_range:
+			time_mean = torch.tensor(durations[i]).mean().item()
+			time_std = torch.tensor(durations[i]).std().item()
+			accu_mean = torch.tensor(accuracies[i]).mean().item()
+			accu_std = torch.tensor(accuracies[i]).std().item()
+			print(f'{i} gpu(s)')
+			print('    Time: Mean    {:>4.0f}s  Std   {:>4.2f}s'.format(time_mean, time_std))
+			print('    Accu: Mean {:2.4f}%  Std {:1.4f}%'.format(accu_mean, accu_std))
+	else:
+		main()
