@@ -21,8 +21,8 @@ parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--batches', type=int, default=None)
 parser.add_argument('--lr', default=0.1, help='')
 parser.add_argument('--resume', default=None, help='')
-parser.add_argument('--batch_size', default=128, help='')
-parser.add_argument('--num_worker', default=4, help='')
+parser.add_argument('--batch-size', type=int, default=128, help='')
+parser.add_argument('--num_worker', type=int, default=4, help='')
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
