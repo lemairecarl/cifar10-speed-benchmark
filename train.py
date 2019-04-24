@@ -37,7 +37,7 @@ def train(net, criterion, optimizer, train_loader, n_batches=-1):
         correct += predicted.eq(targets).sum().item()
 
 
-def test(net, criterion, test_loader):
+def test(net, criterion, test_loader, n_batches):
     net.eval()
 
     test_loss = 0
@@ -46,6 +46,8 @@ def test(net, criterion, test_loader):
 
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
+            if batch_idx == n_batches:
+                break
             inputs = inputs.to('cuda')
             targets = targets.to('cuda')
             outputs = net(inputs)
@@ -71,4 +73,4 @@ def train_epochs(datasets, make_model, n_epochs, n_gpus, batch_size, n_batches=-
     for epoch in range(n_epochs):
         step_lr_scheduler.step()
         train(net, criterion, optimizer, train_loader, n_batches)
-    return test(net, criterion, test_loader)
+    return test(net, criterion, test_loader, n_batches)
