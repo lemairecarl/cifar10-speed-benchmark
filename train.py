@@ -1,5 +1,29 @@
+import os
+
 import torch
 import torch.cuda
+import torchvision
+import torchvision.transforms as transforms
+
+
+def make_datasets(img_size_mult=1):
+    transforms_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.Resize(32 * img_size_mult),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    transforms_test = transforms.Compose([
+        transforms.Resize(32 * img_size_mult),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    cifar_path = os.environ.get('CIFAR', './data')
+    dataset_train = torchvision.datasets.CIFAR10(root=cifar_path, train=True, download=True, transform=transforms_train)
+    dataset_test = torchvision.datasets.CIFAR10(root=cifar_path, train=False, download=True, transform=transforms_test)
+    return dataset_train, dataset_test
 
 
 def make_loaders(datasets, batch_size):

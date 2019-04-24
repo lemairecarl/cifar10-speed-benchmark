@@ -1,14 +1,11 @@
 import argparse
 import itertools
-import os
 import time
 
 import torch.cuda
-import torchvision
-import torchvision.transforms as transforms
 from tqdm import tqdm
 
-from train import train_epochs
+from train import train_epochs, make_datasets
 import densenet.train
 import wide_resnet.train
 
@@ -40,26 +37,6 @@ def print_row(*fields):
 
 
 if __name__ == '__main__':
-    transforms_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.Resize(32 * args.size),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
-    transforms_test = transforms.Compose([
-        transforms.Resize(32 * args.size),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
-
-    cifar_path = os.environ.get('CIFAR', './data')
-    dataset_train = torchvision.datasets.CIFAR10(root=cifar_path, train=True, download=True, transform=transforms_train)
-    dataset_test = torchvision.datasets.CIFAR10(root=cifar_path, train=False, download=True, transform=transforms_test)
-    datasets = dataset_train, dataset_test
-
-    make_model = model_factories[args.model]
-
     device_count = torch.cuda.device_count()
     print(f'Found {device_count} CUDA device(s).')
     if args.gpus is not None:
@@ -70,6 +47,10 @@ if __name__ == '__main__':
     durations = {i: [] for i in dev_count_range}
     accuracies = {i: [] for i in dev_count_range}
     n_m = args.measurements
+
+    make_model = model_factories[args.model]
+    datasets = make_datasets()
+
     for num_gpus in tqdm(ncycles(dev_count_range, n=n_m), total=n_m * len(dev_count_range), desc='Benchmarking'):
         t0 = time.time()
         accu = train_epochs(datasets, make_model, args.epochs, num_gpus, batch_size=args.batch_size * num_gpus,
@@ -78,6 +59,7 @@ if __name__ == '__main__':
 
         durations[num_gpus].append(t1 - t0)
         accuracies[num_gpus].append(accu)
+
     print('---- BENCHMARK PARAMS ----')
     print(f'Num epochs    {args.epochs}')
     print(f'Num batches   {args.batches}')
