@@ -51,7 +51,7 @@ if __name__ == '__main__':
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
 
-    cifar_path = os.environ['CIFAR']
+    cifar_path = os.environ.get('CIFAR', './data')
     dataset_train = torchvision.datasets.CIFAR10(root=cifar_path, train=True, download=True, transform=transforms_train)
     dataset_test = torchvision.datasets.CIFAR10(root=cifar_path, train=False, download=True, transform=transforms_test)
     datasets = dataset_train, dataset_test
