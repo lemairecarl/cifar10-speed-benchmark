@@ -20,6 +20,8 @@ model_factories = {
 
 parser = argparse.ArgumentParser(description='Image classification speed benchmark')
 parser.add_argument('model', choices=model_factories.keys(), type=str)
+parser.add_argument('--gpus', type=int, default=None)
+parser.add_argument('--progressive', action='store_true')
 parser.add_argument('--measurements', type=int, default=4, help='Num measurements for avg and std')
 parser.add_argument('--size', type=int, default=2, help='image size multiplier')
 parser.add_argument('--epochs', type=int, default=2)
@@ -59,12 +61,16 @@ if __name__ == '__main__':
     make_model = model_factories[args.model]
 
     device_count = torch.cuda.device_count()
-    print(f'Found {device_count} CUDA devices.')
-    dev_count_range = range(1, device_count + 1)
+    print(f'Found {device_count} CUDA device(s).')
+    if args.gpus is not None:
+        device_count = args.gpus
+        print(f'Using {device_count} device(s) as requested.')
+
+    dev_count_range = range(1, device_count + 1) if args.progressive else [device_count]
     durations = {i: [] for i in dev_count_range}
     accuracies = {i: [] for i in dev_count_range}
     n_m = args.measurements
-    for num_gpus in tqdm(ncycles(dev_count_range, n=n_m), total=n_m * device_count, desc='Performing benchmark'):
+    for num_gpus in tqdm(ncycles(dev_count_range, n=n_m), total=n_m * len(dev_count_range), desc='Benchmarking'):
         t0 = time.time()
         accu = train_epochs(datasets, make_model, args.epochs, num_gpus, batch_size=args.batch_size * num_gpus,
                             n_batches=args.batches)
