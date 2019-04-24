@@ -19,6 +19,7 @@ from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description='cifar10 classification models')
 parser.add_argument('--benchmark', action='store_true')
+parser.add_argument('--size', type=int, default=1, help='image size multiplier')
 parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--batches', type=int, default=None)
 parser.add_argument('--lr', default=0.1, help='')
@@ -33,10 +34,12 @@ print('==> Preparing data..')
 transforms_train = transforms.Compose([
     transforms.RandomCrop(32, padding=4),
     transforms.RandomHorizontalFlip(),
+    transforms.Resize(32 * args.size),
     transforms.ToTensor(),
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 transforms_test = transforms.Compose([
+    transforms.Resize(32 * args.size),
     transforms.ToTensor(),
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
@@ -105,7 +108,7 @@ def train(epoch):
     # 		  len(train_loader), train_loss/(batch_idx+1), 100.*correct/total))
 
 
-def test(epoch, best_acc):
+def test():
     global net, criterion, optimizer, step_lr_scheduler
     net.eval()
 
@@ -131,32 +134,13 @@ def test(epoch, best_acc):
 
     acc = 100 * correct / total
 
-    if acc > best_acc:
-        # print('==> Saving model..')
-        # state = {
-        #     'net': net.state_dict(),
-        #     'acc': acc,
-        #     'epoch': epoch,
-        # }
-        # if not os.path.isdir('save_model'):
-        #     os.mkdir('save_model')
-        # torch.save(state, './save_model/ckpt.pth')
-        best_acc = acc
-
-    return best_acc
+    return acc
 
 
-def main():
-    best_acc = 0
-    if args.resume is not None:
-        test(epoch=0, best_acc=0)
-    else:
-        for epoch in range(args.epochs):
-            step_lr_scheduler.step()
-            train(epoch)
-            best_acc = test(epoch, best_acc)
-        # print('best test accuracy is ', best_acc)
-        return best_acc
+def train_epochs():
+    for epoch in range(args.epochs):
+        step_lr_scheduler.step()
+        train(epoch)
 
 
 def ncycles(iterable, n):
@@ -180,15 +164,17 @@ if __name__ == '__main__':
             # RUN TRAINING
             make_loaders(args.batch_size * num_gpus)
             make_model(num_gpus=num_gpus)
-            accu = main()
+            train_epochs()
+            accu = test()
             t1 = time.time()
 
             durations[num_gpus].append(t1 - t0)
             accuracies[num_gpus].append(accu)
         print('---- BENCHMARK PARAMS ----')
-        print(f'Num epochs  {args.epochs}')
-        print(f'Num batches {args.batches}')
-        print(f'Batch size  {args.batch_size}')
+        print(f'Num epochs    {args.epochs}')
+        print(f'Num batches   {args.batches}')
+        print(f'Batch size    {args.batch_size}')
+        print(f'Img size mul  {args.size}')
         print('---- BENCHMARK RESULT ----')
         print_row('ngpus', 'time_mean (s)', 'time_std (s)', 'accu_mean (%)', 'accu_std (%)')
         for i in dev_count_range:
@@ -199,5 +185,3 @@ if __name__ == '__main__':
             accu_mean = '{:2.4f}'.format(accuracies_arr.mean().item())
             accu_std = '{:1.4f}'.format(accuracies_arr.std().item())
             print_row(i, time_mean, time_std, accu_mean, accu_std)
-    else:
-        main()
