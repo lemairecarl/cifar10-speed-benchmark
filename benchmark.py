@@ -20,10 +20,11 @@ model_factories = {
 
 parser = argparse.ArgumentParser(description='Image classification speed benchmark')
 parser.add_argument('model', choices=model_factories.keys(), type=str)
+parser.add_argument('--measurements', type=int, default=4, help='Num measurements for avg and std')
 parser.add_argument('--size', type=int, default=2, help='image size multiplier')
 parser.add_argument('--epochs', type=int, default=2)
-parser.add_argument('--batches', type=int, default=None)
-parser.add_argument('--batch-size', type=int, default=64, help='')
+parser.add_argument('--batches', type=int, default=None, help='stop early for testing')
+parser.add_argument('--batch-size', type=int, default=64, help='Batch size PER GPU')
 args = parser.parse_args()
 
 
@@ -33,7 +34,7 @@ def ncycles(iterable, n):
 
 
 def print_row(*fields):
-    print('\t'.join(map(str, fields)))
+    print(','.join(map(str, fields)))
 
 
 if __name__ == '__main__':
@@ -62,7 +63,8 @@ if __name__ == '__main__':
     dev_count_range = range(1, device_count + 1)
     durations = {i: [] for i in dev_count_range}
     accuracies = {i: [] for i in dev_count_range}
-    for num_gpus in tqdm(ncycles(dev_count_range, n=4), total=4 * device_count, desc='Performing benchmark'):
+    n_m = args.measurements
+    for num_gpus in tqdm(ncycles(dev_count_range, n=n_m), total=n_m * device_count, desc='Performing benchmark'):
         t0 = time.time()
         accu = train_epochs(datasets, make_model, args.epochs, num_gpus, batch_size=args.batch_size * num_gpus,
                             n_batches=args.batches)
