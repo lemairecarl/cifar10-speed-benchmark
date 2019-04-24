@@ -12,7 +12,8 @@ IMPORTANT NOTES ABOUT ACCURACY:
 This script looks for the CIFAR data inside `$CIFAR`; if the environment variable does not exist, it downloads the dataset into `./data`.
 
 ```
-usage: benchmark.py [-h] [--measurements MEASUREMENTS] [--size SIZE]
+usage: benchmark.py [-h] [--gpus GPUS] [--progressive]
+                    [--measurements MEASUREMENTS] [--size SIZE]
                     [--epochs EPOCHS] [--batches BATCHES]
                     [--batch-size BATCH_SIZE]
                     {densenet,wideresnet}
@@ -23,10 +24,12 @@ positional arguments:
   {densenet,wideresnet}
 
 optional arguments:
-  -h, --help                   show this help message and exit
-  --measurements MEASUREMENTS  Num measurements for avg and std
-  --size SIZE                  image size multiplier
+  -h, --help                     show this help message and exit
+  --gpus GPUS                    Number of gpus to use. Default: all
+  --progressive                  Try 1 gpus, 2 gpus, 3 gpus, etc.
+  --measurements MEASUREMENTS    Num measurements for avg and std
+  --size SIZE                    image size multiplier
   --epochs EPOCHS
-  --batches BATCHES            stop early for testing
-  --batch-size BATCH_SIZE      Batch size PER GPU
+  --batches BATCHES              stop early for testing
+  --batch-size BATCH_SIZE        Batch size PER GPU
 ```

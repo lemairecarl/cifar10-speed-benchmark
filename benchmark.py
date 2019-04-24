@@ -20,8 +20,8 @@ model_factories = {
 
 parser = argparse.ArgumentParser(description='Image classification speed benchmark')
 parser.add_argument('model', choices=model_factories.keys(), type=str)
-parser.add_argument('--gpus', type=int, default=None)
-parser.add_argument('--progressive', action='store_true')
+parser.add_argument('--gpus', type=int, default=None, help='Number of gpus to use. Default: all')
+parser.add_argument('--progressive', action='store_true', help='Try 1 gpus, 2 gpus, 3 gpus, etc.')
 parser.add_argument('--measurements', type=int, default=4, help='Num measurements for avg and std')
 parser.add_argument('--size', type=int, default=2, help='image size multiplier')
 parser.add_argument('--epochs', type=int, default=2)
@@ -88,8 +88,8 @@ if __name__ == '__main__':
     for i in dev_count_range:
         durations_arr = torch.tensor(durations[i])
         accuracies_arr = torch.tensor(accuracies[i])
-        time_mean = '{:>4.0f}'.format(durations_arr.mean().item())
-        time_std = '{:>4.2f}'.format(durations_arr.std().item())
+        time_mean = '{:.0f}'.format(durations_arr.mean().item())
+        time_std = '{:.2f}'.format(durations_arr.std().item())
         accu_mean = '{:2.4f}'.format(accuracies_arr.mean().item())
         accu_std = '{:1.4f}'.format(accuracies_arr.std().item())
         print_row(i, time_mean, time_std, accu_mean, accu_std)
