@@ -1,0 +1,3 @@
+torch  # Please install pytorch as instructed on pytorch.org
+torchvision
+tqdm
