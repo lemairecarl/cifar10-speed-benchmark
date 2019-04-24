@@ -50,7 +50,7 @@ class Wide_ResNet(nn.Module):
         n = int((depth-4)/6)
         k = widen_factor
 
-        print('| Wide-Resnet %dx%d' %(depth, k))
+        # print('| Wide-Resnet %dx%d' %(depth, k))
         nStages = [16, 16*k, 32*k, 64*k]
 
         self.conv1 = conv3x3(3,nStages[0])
@@ -76,7 +76,7 @@ class Wide_ResNet(nn.Module):
         out = self.layer2(out)
         out = self.layer3(out)
         out = F.relu(self.bn1(out))
-        out = F.avg_pool2d(out, 8)
+        out = F.adaptive_avg_pool2d(out, 1)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
 
