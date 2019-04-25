@@ -6,7 +6,7 @@ import torchvision
 import torchvision.transforms as transforms
 
 
-def make_datasets(img_size_mult=1):
+def make_datasets(img_size_mult):
     transforms_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
@@ -61,7 +61,7 @@ def train(net, criterion, optimizer, train_loader, n_batches=-1):
         correct += predicted.eq(targets).sum().item()
 
 
-def test(net, criterion, test_loader, n_batches):
+def test(net, criterion, test_loader, n_batches=-1):
     net.eval()
 
     test_loss = 0
@@ -81,10 +81,6 @@ def test(net, criterion, test_loader, n_batches):
             _, predicted = outputs.max(1)
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
-
-        # if batch_idx % 10 == 0:
-        # 	print('epoch : {} [{}/{}]| loss: {:.3f} | acc: {:.3f}'.format(epoch, batch_idx,
-        # 	  len(test_loader), test_loss/(batch_idx+1), 100 * correct/total))
 
     acc = 100 * correct / total
 

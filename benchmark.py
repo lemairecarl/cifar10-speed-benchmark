@@ -50,7 +50,7 @@ if __name__ == '__main__':
     n_m = args.measurements
 
     make_model = model_factories[args.model]
-    datasets = make_datasets()
+    datasets = make_datasets(img_size_mult=args.size)
 
     for num_gpus in tqdm(ncycles(dev_count_range, n=n_m), total=n_m * len(dev_count_range), desc='Benchmarking'):
         t0 = time.time()
