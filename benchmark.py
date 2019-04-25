@@ -42,6 +42,7 @@ if __name__ == '__main__':
     if args.gpus is not None:
         device_count = args.gpus
         print(f'Using {device_count} device(s) as requested.')
+    print(f'Progressive mode: {"ON" if args.progressive else "OFF"}')
 
     dev_count_range = range(1, device_count + 1) if args.progressive else [device_count]
     durations = {i: [] for i in dev_count_range}
