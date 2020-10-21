@@ -24,6 +24,7 @@ parser.add_argument('--size', type=int, default=2, help='image size multiplier')
 parser.add_argument('--epochs', type=int, default=2)
 parser.add_argument('--batches', type=int, default=None, help='stop early for testing')
 parser.add_argument('--batch-size', type=int, default=64, help='Batch size PER GPU')
+parser.add_argument('--output-accu', action='store_true')
 args = parser.parse_args()
 
 
@@ -52,6 +53,11 @@ if __name__ == '__main__':
     make_model = model_factories[args.model]
     datasets = make_datasets(img_size_mult=args.size)
 
+    print('Warming up...')
+    train_epochs(datasets, make_model, args.epochs, device_count, batch_size=args.batch_size * device_count,
+                 n_batches=10)
+
+    print('Benchmarking...')
     for num_gpus in tqdm(ncycles(dev_count_range, n=n_m), total=n_m * len(dev_count_range), desc='Benchmarking'):
         t0 = time.time()
         accu = train_epochs(datasets, make_model, args.epochs, num_gpus, batch_size=args.batch_size * num_gpus,
@@ -67,12 +73,18 @@ if __name__ == '__main__':
     print(f'Batch size    {args.batch_size}')
     print(f'Img size mul  {args.size}')
     print('---- BENCHMARK RESULT ----')
-    print_row('ngpus', 'time_mean (s)', 'time_std (s)', 'accu_mean (%)', 'accu_std (%)')
+    if args.output_accu:
+        print_row('ngpus', 'time_mean (s)', 'time_std (s)', 'accu_mean (%)', 'accu_std (%)')
+    else:
+        print_row('ngpus', 'time_mean (s)', 'time_std (s)')
     for i in dev_count_range:
         durations_arr = torch.tensor(durations[i])
         accuracies_arr = torch.tensor(accuracies[i])
         time_mean = '{:.0f}'.format(durations_arr.mean().item())
         time_std = '{:.2f}'.format(durations_arr.std().item())
-        accu_mean = '{:2.4f}'.format(accuracies_arr.mean().item())
-        accu_std = '{:1.4f}'.format(accuracies_arr.std().item())
-        print_row(i, time_mean, time_std, accu_mean, accu_std)
+        if args.output_accu:
+            accu_mean = '{:2.4f}'.format(accuracies_arr.mean().item())
+            accu_std = '{:1.4f}'.format(accuracies_arr.std().item())
+            print_row(i, time_mean, time_std, accu_mean, accu_std)
+        else:
+            print_row(i, time_mean, time_std)
