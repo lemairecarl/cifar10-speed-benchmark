@@ -24,6 +24,7 @@ parser.add_argument('--size', type=int, default=2, help='image size multiplier')
 parser.add_argument('--epochs', type=int, default=2)
 parser.add_argument('--batches', type=int, default=None, help='stop early for testing')
 parser.add_argument('--batch-size', type=int, default=64, help='Batch size PER GPU')
+parser.add_argument('--workers-per-gpu', type=int, default=4, help='Workers per GPU')
 parser.add_argument('--output-accu', action='store_true')
 args = parser.parse_args()
 
@@ -55,13 +56,13 @@ if __name__ == '__main__':
 
     print('Warming up...')
     train_epochs(datasets, make_model, args.epochs, device_count, batch_size=args.batch_size * device_count,
-                 n_batches=10)
+                 n_batches=10, workers_per_gpu=args.workers_per_gpu)
 
     print('Benchmarking...')
     for num_gpus in tqdm(ncycles(dev_count_range, n=n_m), total=n_m * len(dev_count_range), desc='Benchmarking'):
         t0 = time.time()
         accu = train_epochs(datasets, make_model, args.epochs, num_gpus, batch_size=args.batch_size * num_gpus,
-                            n_batches=args.batches)
+                            n_batches=args.batches, workers_per_gpu=args.workers_per_gpu)
         t1 = time.time()
 
         durations[num_gpus].append(t1 - t0)
@@ -71,6 +72,7 @@ if __name__ == '__main__':
     print(f'Num epochs    {args.epochs}')
     print(f'Num batches   {args.batches}')
     print(f'Batch size    {args.batch_size}')
+    print(f'Workers/gpu   {args.workers_per_gpu}')
     print(f'Img size mul  {args.size}')
     print('---- BENCHMARK RESULT ----')
     if args.output_accu:

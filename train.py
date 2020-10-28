@@ -26,13 +26,13 @@ def make_datasets(img_size_mult):
     return dataset_train, dataset_test
 
 
-def make_loaders(datasets, batch_size):
+def make_loaders(datasets, batch_size, num_workers=8):
     dataset_train, dataset_test = datasets
 
     train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=batch_size,
-                                               shuffle=True, num_workers=8)
+                                               shuffle=True, num_workers=num_workers)
     test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=batch_size,
-                                              shuffle=False, num_workers=8)
+                                              shuffle=False, num_workers=num_workers)
     return train_loader, test_loader
 
 
@@ -87,8 +87,8 @@ def test(net, criterion, test_loader, n_batches=-1):
     return acc
 
 
-def train_epochs(datasets, make_model, n_epochs, n_gpus, batch_size, n_batches=-1):
-    train_loader, test_loader = make_loaders(datasets, batch_size)
+def train_epochs(datasets, make_model, n_epochs, n_gpus, batch_size, n_batches=-1, workers_per_gpu=4):
+    train_loader, test_loader = make_loaders(datasets, batch_size, num_workers=n_gpus * workers_per_gpu)
     net, criterion, optimizer, step_lr_scheduler = make_model(num_gpus=n_gpus)
     for epoch in range(n_epochs):
         step_lr_scheduler.step()
