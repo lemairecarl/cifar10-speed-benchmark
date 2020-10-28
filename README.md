@@ -9,7 +9,7 @@ IMPORTANT NOTES ABOUT ACCURACY:
 
 ## Usage
 
-This script looks for the CIFAR data inside `$CIFAR`; if the environment variable does not exist, it downloads the dataset into `./data`.
+This script looks for the CIFAR data inside `$CIFAR`; if the environment variable does not exist, it downloads the dataset into `./data`. You can manually [download the data here](https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz) and put it inside the directory.
 
 ```
 usage: benchmark.py [-h] [--gpus GPUS] [--progressive]
